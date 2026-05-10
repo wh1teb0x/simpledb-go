@@ -1,0 +1,14 @@
+# Binaries
+/bin/
+*.exe
+*.test
+*.out
+
+# DB data dirs created by tests / runs
+/datadir/
+*.db/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
