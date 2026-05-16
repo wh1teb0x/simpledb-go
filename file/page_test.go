@@ -2,14 +2,26 @@ package file
 
 import (
 	"bytes"
+	"math"
 	"testing"
 )
 
-func TestPageIntRountTrip(t *testing.T) {
+func TestPageIntRoundTrip(t *testing.T) {
 	p := NewPage(100)
-	p.SetInt(0, 42)
-	if got := p.GetInt(0); got != 42 {
-		t.Errorf("expected 42, got %d", got)
+	cases := []struct {
+		offset int
+		val    int32
+	}{
+		{0, 42},
+		{4, -1},
+		{8, math.MaxInt32},
+		{12, math.MinInt32},
+	}
+	for _, c := range cases {
+		p.SetInt(c.offset, c.val)
+		if got := p.GetInt(c.offset); got != c.val {
+			t.Errorf("expected %d, got %d", c.val, got)
+		}
 	}
 }
 
