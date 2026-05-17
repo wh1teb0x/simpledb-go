@@ -50,21 +50,64 @@ func NewFileMgr(dbDirectory string, blockSize int) (*FileMgr, error) {
 }
 
 func (fm *FileMgr) Read(blk BlockId, p *Page) error {
-	return nil
+	fm.mu.Lock()
+	defer fm.mu.Unlock()
+
+	f, err := fm.getFile(blk.FileName())
+	if err != nil {
+		return err
+	}
+
+	offset := int64(blk.Number()) * int64(fm.blockSize)
+	_, err = f.ReadAt(p.contents(), offset)
+	return err
 }
 
 func (fm *FileMgr) Write(blk BlockId, p *Page) error {
-	return nil
+	fm.mu.Lock()
+	defer fm.mu.Unlock()
+
+	f, err := fm.getFile(blk.FileName())
+	if err != nil {
+		return err
+	}
+
+	offset := int64(blk.Number()) * int64(fm.blockSize)
+	_, err = f.WriteAt(p.contents(), offset)
+	return err
 }
 
 func (fm *FileMgr) Append(filename string) (BlockId, error) {
-	return BlockId{}, nil
+	fm.mu.Lock()
+	defer fm.mu.Unlock()
+
+	newBlkNum, err := fm.length(filename)
+	if err != nil {
+		return BlockId{}, err
+	}
+
+	blk := NewBlockId(filename, newBlkNum)
+
+	f, err := fm.getFile(filename)
+	if err != nil {
+		return BlockId{}, err
+	}
+
+	buf := make([]byte, fm.blockSize)
+	offset := int64(newBlkNum) * int64(fm.blockSize)
+	if _, err := f.WriteAt(buf, offset); err != nil {
+		return BlockId{}, err
+	}
+	return blk, nil
 }
 
 func (fm *FileMgr) Length(filename string) (int, error) {
 	fm.mu.Lock()
 	defer fm.mu.Unlock()
+	return fm.length(filename)
+}
 
+func (fm *FileMgr) length(filename string) (int, error) {
 	f, err := fm.getFile(filename)
 	if err != nil {
 		return 0, err
@@ -74,10 +117,7 @@ func (fm *FileMgr) Length(filename string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-
-	length := int(info.Size() / int64(fm.blockSize))
-
-	return length, nil
+	return int(info.Size() / int64(fm.blockSize)), nil
 }
 
 func (fm *FileMgr) IsNew() bool {
